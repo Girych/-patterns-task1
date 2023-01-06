@@ -1,85 +1,64 @@
-package ru.netology.test;
+package ru.netology.delivery.test;
 
 import com.codeborne.selenide.Condition;
-import com.codeborne.selenide.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.Keys;
+import ru.netology.delivery.data.DataGenerator;
 
-import static com.codeborne.selenide.Condition.text;
+import java.time.Duration;
+
+import static com.codeborne.selenide.Condition.*;
+import static com.codeborne.selenide.Selectors.byText;
 import static com.codeborne.selenide.Selenide.$;
 import static com.codeborne.selenide.Selenide.open;
-import static ru.netology.data.DataGenerator.Registration.getRegisteredUser;
-import static ru.netology.data.DataGenerator.Registration.getUser;
-import static ru.netology.data.DataGenerator.getRandomLogin;
-import static ru.netology.data.DataGenerator.getRandomPassword;
 
-class AuthTest {
+class DeliveryTest {
 
     @BeforeEach
     void setup() {
-        Configuration.headless = true;
         open("http://localhost:9999");
     }
 
     @Test
-    @DisplayName("Should successfully login with active registered user")
-    void shouldSuccessfulLoginIfRegisteredActiveUser() {
-        var registeredUser = getRegisteredUser("active");
-        $("[data-test-id=login] input").setValue(registeredUser.getLogin());
-        $("[data-test-id=password] input").setValue(registeredUser.getPassword());
-        $("[data-test-id=action-login]").click();
-        $("h2").shouldBe(Condition.visible).shouldHave(text("Личный кабинет"));
-    }
+    @DisplayName("Should successful plan and replan meeting")
+    void shouldSuccessfulPlanAndReplanMeeting() {
+        var validUser = DataGenerator.Registration.generateUser("ru");
+        var daysToAddForFirstMeeting = 4;
+        var firstMeetingDate = DataGenerator.generateDate(daysToAddForFirstMeeting);
+        var daysToAddForSecondMeeting = 7;
+        var secondMeetingDate = DataGenerator.generateDate(daysToAddForSecondMeeting);
+        $("[data-test-id='city'] input").setValue(validUser.getCity());
+        $("[data-test-id='date'] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.DELETE);
+        $("[data-test-id='date'] input").setValue(firstMeetingDate);
+        $("[data-test-id='name'] input").setValue(validUser.getName());
+        $("[data-test-id='phone'] input").setValue(validUser.getPhone());
+        $("[data-test-id='agreement']").click();
+        $("button.button").click();
+        $(byText ("Успешно!")).shouldBe(visible, Duration.ofSeconds(15));
+        $("[data-test-id='success-notification'] .notification__content")
+                .shouldHave(exactText("Встреча успешно запланирована на " + firstMeetingDate))
+                .shouldBe(visible);
+        $("[data-test-id='date'] input").sendKeys(Keys.chord(Keys.SHIFT, Keys.HOME), Keys.DELETE);
+        $("[data-test-id='date'] input").setValue(secondMeetingDate);
+        $("button.button").click();
+        $("[data-test-id='replan-notification'] .notification__content")
+                .shouldHave(text("У вас уже запланирована встреча на другую дату. Перепланировать?"))
+                .shouldBe(visible);
+        $("[data-test-id='replan-notification'] button").click();
+        $("[data-test-id='success-notification'] .notification__content")
+                .shouldHave(exactText("Встреча успешно запланирована на " + secondMeetingDate))
+                .shouldBe(visible);
 
-    @Test
-    @DisplayName("Should get error message if login with not registered user")
-    void shouldGetErrorIfNotRegisteredUser() {
-        var notRegisteredUser = getUser("active");
-        $("[data-test-id=login] input").setValue(notRegisteredUser.getLogin());
-        $("[data-test-id=password] input").setValue(notRegisteredUser.getPassword());
-        $("[data-test-id=action-login]").click();
-        $("[data-test-id=error-notification]")
-                .shouldBe(Condition.visible)
-                .shouldHave(text("Неверно указан логин или пароль"));
-    }
 
-    @Test
-    @DisplayName("Should get error message if login with blocked registered user")
-    void shouldGetErrorIfBlockedUser() {
-        var blockedUser = getRegisteredUser("blocked");
-        $("[data-test-id=login] input").setValue(blockedUser.getLogin());
-        $("[data-test-id=password] input").setValue(blockedUser.getPassword());
-        $("[data-test-id=action-login]").click();
-        $("[data-test-id=error-notification]")
-                .shouldBe(Condition.visible)
-                .shouldHave(text("Пользователь заблокирован"));
-    }
 
-    @Test
-    @DisplayName("Should get error message if login with wrong login")
-    void shouldGetErrorIfWrongLogin() {
-        var registeredUser = getRegisteredUser("active");
-        var wrongLogin = getRandomLogin();
-        $("[data-test-id=login] input").setValue(wrongLogin);
-        $("[data-test-id=password] input").setValue(registeredUser.getPassword());
-        $("[data-test-id=action-login]").click();
-        $("[data-test-id=error-notification]")
-                .shouldBe(Condition.visible)
-                .shouldHave(text("Неверно указан логин или пароль"));
 
-    }
 
-    @Test
-    @DisplayName("Should get error message if login with wrong password")
-    void shouldGetErrorIfWrongPassword() {
-        var registeredUser = getRegisteredUser("active");
-        var wrongPassword = getRandomPassword();
-        $("[data-test-id=login] input").setValue(registeredUser.getLogin());
-        $("[data-test-id=password] input").setValue(wrongPassword);
-        $("[data-test-id=action-login]").click();
-        $("[data-test-id=error-notification]")
-                .shouldBe(Condition.visible)
-                .shouldHave(text("Неверно указан логин или пароль"));
+        // TODO: добавить логику теста в рамках которого будет выполнено планирование и перепланирование встречи.
+        // Для заполнения полей формы можно использовать пользователя validUser и строки с датами в переменных
+        // firstMeetingDate и secondMeetingDate. Можно также вызывать методы generateCity(locale),
+        // generateName(locale), generatePhone(locale) для генерации и получения в тесте соответственно города,
+        // имени и номера телефона без создания пользователя в методе generateUser(String locale) в датагенераторе
     }
 }
